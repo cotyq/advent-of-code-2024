@@ -19,59 +19,31 @@ def is_wall(position):
     return maze[position[0]][position[1]] == "#"
 
 
-def cheating_bfs(start, finish, original_distance, cheating_moves=1):
+def dijkstra(start):
     q = deque()
     visited = set()
-    visited.add(start)
+    distance = {}
 
-    q.append((start, 0, visited, cheating_moves))
-
-    solutions = 0
-
-    while q:
-        current, distance, visited, cheating_moves = q.popleft()
-        if distance + 1 >= original_distance - 100:
-            print("too long")
-            continue
-        for direction in directions:
-            next = add_direction(current, direction)
-            if next == finish:
-                print("fin")
-                if distance + 1 < original_distance - 100:
-                    solutions += 1
-            elif is_valid(next) and next not in visited:
-                if is_wall(next) and cheating_moves:
-                    next_visited = visited.copy()
-                    next_visited.add(next)
-                    q.append((next, distance + 1, next_visited, cheating_moves - 1))
-                elif not is_wall(next):
-                    next_visited = visited.copy()
-                    next_visited.add(next)
-                    q.append((next, distance + 1, next_visited, cheating_moves))
-
-    return solutions
-
-
-def bfs(start, finish):
-    q = deque()
-    visited = set()
-
-    visited.add(start)
-    q.append((start, 0))
+    q.append(start)
+    distance[start] = 0
 
     while q:
-        current, distance = q.popleft()
+        current = q.popleft()
+        d = distance[current] + 1
         for direction in directions:
             next = add_direction(current, direction)
             if is_valid(next) and not is_wall(next) and next not in visited:
-                visited.add(next)
-                q.append((next, distance + 1))
-                if next == finish:
-                    return distance + 1
+                q.append(next)
+                if next not in distance:
+                    distance[next] = d
+                distance[next] = min(distance[next], d)
+        visited.add(current)
+    return distance
 
 
 with open("input20") as file:
     maze = [line.strip() for line in file if line.strip()]
+
 
 start = end = (0, 0)
 for i in range(len(maze)):
@@ -81,7 +53,22 @@ for i in range(len(maze)):
         elif maze[i][j] == "E":
             end = (i, j)
 
-distance = bfs(start, end)
-print(distance)
-solutions = cheating_bfs(start, end, distance, cheating_moves=1)
+distance = dijkstra(start)
+total_distance = distance[end]
+solutions = 0
+max_cheating = 20
+
+for i in range(len(maze)):
+    for j in range(len(maze[0])):
+        if not is_wall((i, j)):
+            for dx in range(-max_cheating, max_cheating + 1):
+                for dy in range(-max_cheating, max_cheating + 1):
+                    if 1 <= abs(dx) + abs(dy) <= max_cheating:
+                        cheat_position = (i+dx, j+dy)
+                        if is_valid(cheat_position) and not is_wall(cheat_position):
+                            cheat_distance = distance[(i, j)] + abs(dx) + abs(dy) + total_distance - distance[cheat_position]
+                            if cheat_distance <= total_distance - 100:
+                               solutions += 1
+
 print(solutions)
+
